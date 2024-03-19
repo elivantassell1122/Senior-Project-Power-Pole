@@ -1,0 +1,101 @@
+import serial
+import time
+import csv
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+Vcc= 3.3
+
+#Original function without timestamps, were taking data samples for 5 seconds
+#def read_and_log_data(ser, filename):
+    #start_time = time.time()
+   #end_time = start_time + 5  # Capture for 5 seconds
+    
+    #with open(filename, mode='w', newline='') as file:
+        #writer = csv.writer(file)
+        #writer.writerow(["Time", "Sensor Value"])  # CSV Header
+        
+        #while time.time() < end_time:
+            #data = ser.readline().decode('utf-8').strip()
+            #if data:
+                #current_time = time.time()
+                #timestamp = (current_time - start_time)  # Time in seconds since start
+                #writer.writerow([timestamp, data])
+                #print(timestamp, data)  # Optional: Print the data to the console
+
+#Different new function for adding timestamps, takes data based on amount of samples we want to take
+def read_and_log_data(ser, filename):
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Timestamp", "Sensor Value 1", "Sensor Value 2","Sensor Value 3"])  # CSV Header
+        
+        for _ in range(100):  # Adjust this number based on expected sampling rate and duration(DETERMINED BY ARDUINO DELAY)
+            line = ser.readline().decode('utf-8').strip()
+            if line:
+                parts = line.split(',')  # Split the line into its components
+                if len(parts) == 4:  # Ensure there are four parts: timestamp and three sensor values
+                    timestamp, sensor_value_1, sensor_value_2, sensor_value_3 = parts
+                    writer.writerow([timestamp, sensor_value_1, sensor_value_2, sensor_value_3])
+                    print(timestamp, sensor_value_1, sensor_value_2, sensor_value_3)  # Optional: Print data to the console
+
+
+
+# Configuration
+ser = serial.Serial('/dev/tty.usbmodem150432301', 115200)  # Adjust your port and baud rate
+csv_filename = "sensor_data_timestamps.csv"
+
+# Capture and log data
+read_and_log_data(ser, csv_filename)
+
+# Load the data from CSV
+data = pd.read_csv(csv_filename)
+
+# Convert sensor values to voltages
+data['Voltage 1'] = data['Sensor Value 1'].astype(float) * (Vcc / 1023)
+data['Voltage 2'] = data['Sensor Value 2'].astype(float) * (Vcc / 1023)
+data['Voltage 3'] = data['Sensor Value 3'].astype(float) * (Vcc / 1023)
+
+# Plotting Voltage vs. Time for three sensors
+plt.figure(figsize=(10, 6))
+
+# Plot each sensor's voltage data
+plt.plot(data['Timestamp'], data['Voltage 1'], label='Sensor 1 Voltage', linewidth=1)
+#plt.plot(data['Timestamp'], data['Voltage 2'], label='Sensor 2 Voltage', linewidth=1)
+#plt.plot(data['Timestamp'], data['Voltage 3'], label='Sensor 3 Voltage', linewidth=1)
+
+plt.xlabel('Time (seconds)')
+plt.ylabel('Voltage (V)')
+plt.title('Sensor Voltage Over Time')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
+
+
+#Plotting Frequency vs. Magnitude using a fast fourier transform
+#sensor_values = data['Sensor Value'].values  # Assuming this is a numpy array
+
+# Apply a window function (Hamming-eliminates spectral leakage)
+#window = np.hamming(len(sensor_values))
+#windowed_sensor_values = sensor_values * window
+
+# Then proceed with FFT on the windowed data
+#fft_result = np.fft.fft(windowed_sensor_values)
+#fft_freq = np.fft.fftfreq(len(windowed_sensor_values), (data['Timestamp'].iloc[1] - data['Timestamp'].iloc[0]))
+#fft_magnitude = np.abs(fft_result)
+
+# Plotting Frequency Domain
+#plt.figure(figsize=(10, 6))
+#plt.plot(fft_freq[:len(fft_freq)//2], fft_magnitude[:len(fft_magnitude)//2], label='FFT Magnitude')
+#plt.xlabel('Frequency (Hz)')
+#plt.ylabel('Magnitude (Db)')
+#plt.title('Frequency Domain of Sensor Data')
+#plt.grid(True)
+#plt.legend()
+#plt.show()
+
+
+
+ser.close()  # Close the serial port when done 
