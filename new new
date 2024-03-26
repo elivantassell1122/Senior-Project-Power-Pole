@@ -1,0 +1,101 @@
+import serial
+import time
+import csv
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+
+def read_and_log_data(ser, filename):
+    ser.write(b'start\n')  # Send start command to Arduino
+    time.sleep(2)  # Wait for Arduino to initialize
+
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Timestamp", "Sensor Value 1", "Sensor Value 2", "Sensor Value 3"])  # CSV Header
+        
+        for _ in range(10000):  # Adjust based on sampling rate and duration
+            line = ser.readline().decode('utf-8').strip()
+            if line:
+                parts = line.split(',')
+                if len(parts) == 4:
+                    timestamp, sensor_value_1, sensor_value_2, sensor_value_3 = parts
+                    writer.writerow([timestamp, sensor_value_1, sensor_value_2, sensor_value_3])
+                    print(timestamp, sensor_value_1, sensor_value_2, sensor_value_3)
+
+# Configuration
+ser = serial.Serial('/dev/tty.usbmodem150432301', 115200)  # Adjust your port and baud rate as necessary
+csv_filename = "sensor_data_timestamps.csv"
+
+# Capture and log data
+read_and_log_data(ser, csv_filename)
+
+# Load the data from CSV
+data = pd.read_csv(csv_filename)
+
+# Conversion to Voltage (for one sensor as example)
+Vcc = 3.3
+data['Voltage 1'] = data['Sensor Value 1'].astype(float) * (Vcc / 1023)
+data['Voltage 2'] = data['Sensor Value 2'].astype(float) * (Vcc / 1023)
+data['Voltage 3'] = data['Sensor Value 3'].astype(float) * (Vcc / 1023)
+
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.plot(data['Timestamp'], data['Voltage 1'], label='Sensor 1 Voltage', linewidth=1)
+plt.plot(data['Timestamp'], data['Voltage 2'], label='Sensor 2 Voltage', linewidth=1)
+plt.plot(data['Timestamp'], data['Voltage 3'], label='Sensor 3 Voltage', linewidth=1)
+plt.xlabel('Time (milliseconds)')
+plt.ylabel('Voltage (V)')
+plt.title('Sensor Voltage Over Time')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
+
+def moving_average(data, window_size):
+    return data.rolling(window=window_size).mean()
+
+# Apply to Sensor Value 2 as an example
+window_size = 10  # Adjust based on your data's characteristics
+data['Smoothed Sensor Value 2'] = moving_average(data['Sensor Value 2'].astype(float), window_size)
+
+# Plotting the smoothed data
+plt.figure(figsize=(10, 6))
+plt.plot(data['Timestamp'], data['Smoothed Sensor Value 2'], label='Smoothed Sensor 2 Voltage', linewidth=1)
+plt.xlabel('Time (milliseconds)')
+plt.ylabel('Smoothed Voltage (V)')
+plt.title('Smoothed Sensor 2 Voltage Over Time')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
+
+
+
+
+#Plotting Frequency vs. Magnitude using a fast fourier transform
+#sensor_values = data['Sensor Value'].values  # Assuming this is a numpy array
+
+# Apply a window function (Hamming-eliminates spectral leakage)
+#window = np.hamming(len(sensor_values))
+#windowed_sensor_values = sensor_values * window
+
+# Then proceed with FFT on the windowed data
+#fft_result = np.fft.fft(windowed_sensor_values)
+#fft_freq = np.fft.fftfreq(len(windowed_sensor_values), (data['Timestamp'].iloc[1] - data['Timestamp'].iloc[0]))
+#fft_magnitude = np.abs(fft_result)
+
+# Plotting Frequency Domain
+#plt.figure(figsize=(10, 6))
+#plt.plot(fft_freq[:len(fft_freq)//2], fft_magnitude[:len(fft_magnitude)//2], label='FFT Magnitude')
+#plt.xlabel('Frequency (Hz)')
+#plt.ylabel('Magnitude (Db)')
+#plt.title('Frequency Domain of Sensor Data')
+#plt.grid(True)
+#plt.legend()
+#plt.show()
+
+
+
+ser.close()  # Close the serial port when done 
