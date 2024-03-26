@@ -1,0 +1,110 @@
+import serial
+import time
+import csv
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+from datetime import datetime
+
+#Change this every test 
+current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+filename = str(input("Input the name of this test: ")) #Enter the name for the pole under test
+csv_filename = filename+current_time
+
+def read_and_log_data(ser, filename):
+    ser.write(b'start\n')  # Send start command to Arduino
+    time.sleep(2)  # Wait for Arduino to initialize
+
+    with open(filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(["Timestamp", "Sensor Value 1", "Sensor Value 2", "Sensor Value 3"])  # CSV Header
+        
+        for _ in range(10000):  # Adjust based on sampling rate and duration
+            line = ser.readline().decode('utf-8').strip()
+            if line:
+                parts = line.split(',')
+                if len(parts) == 4:
+                    timestamp, sensor_value_1, sensor_value_2, sensor_value_3 = parts
+                    writer.writerow([timestamp, sensor_value_1, sensor_value_2, sensor_value_3])
+                    print(timestamp, sensor_value_1, sensor_value_2, sensor_value_3)
+
+# Configuration
+ser = serial.Serial('/dev/tty.usbmodem150432301', 115200)  # Adjust your port and baud rate as necessary
+# csv_filename = "sensor_data_timestamps.csv"
+
+# Capture and log data
+read_and_log_data(ser, csv_filename)
+
+#Save the data to your computuer 
+documents_path = "/Users/aneekanunnikhoven/Desktop/SrProject/VScode" # enter documents path
+csvfilename = f"{documents_path}/data_{csv_filename}.csv"
+
+# Load the data from CSV
+data = pd.read_csv(csv_filename)
+
+# Conversion to Voltage (for one sensor as example)
+Vcc = 3.3
+data['Voltage 1'] = data['Sensor Value 1'].astype(float) * (Vcc / 1023)
+data['Voltage 2'] = data['Sensor Value 2'].astype(float) * (Vcc / 1023)
+data['Voltage 3'] = data['Sensor Value 3'].astype(float) * (Vcc / 1023)
+
+
+
+# Plotting
+plt.figure(figsize=(10, 6))
+plt.plot(data['Timestamp'], data['Voltage 1'], label='Sensor 1 Voltage', linewidth=1)
+plt.plot(data['Timestamp'], data['Voltage 2'], label='Sensor 2 Voltage', linewidth=1)
+plt.plot(data['Timestamp'], data['Voltage 3'], label='Sensor 3 Voltage', linewidth=1)
+plt.xlabel('Time (milliseconds)')
+plt.ylabel('Voltage (V)')
+plt.title('Sensor Voltage Over Time')
+plt.grid(True)
+plt.legend()
+#change this to match the location on your individual computer
+plt.savefig(f"/Users/aneekanunnikhoven/Desktop/SrProject/VScode/image") # Enter location of file where you want images to be saved
+plt.show()
+
+
+# timestamp = data['Timestamp']
+# resampled_time = np.linspace(timestamp.min(), timestamp.max(), 1000)
+
+# volts = data['Voltage 1']
+# resampled_volts = np.interp(resampled_time, timestamp, volts)
+
+# plt.plot(resampled_time, resampled_volts, linestyle='-')
+
+# iterpolate data
+# x_interpolated = np.linspace(data['Voltage 1'].min(), data['Voltage 1'].max(), 1000)
+# y_interpolated = np.interp(x_interpolated, data['Voltage 1'], data['Timestamp'])
+
+# plt.plot(y_interpolated, x_interpolated, 'r-', label="Interpolated Data", linewidth=1)
+
+# Plot each sensor's voltage data
+
+
+
+#Plotting Frequency vs. Magnitude using a fast fourier transform
+#sensor_values = data['Sensor Value'].values  # Assuming this is a numpy array
+
+# Apply a window function (Hamming-eliminates spectral leakage)
+#window = np.hamming(len(sensor_values))
+#windowed_sensor_values = sensor_values * window
+
+# Then proceed with FFT on the windowed data
+#fft_result = np.fft.fft(windowed_sensor_values)
+#fft_freq = np.fft.fftfreq(len(windowed_sensor_values), (data['Timestamp'].iloc[1] - data['Timestamp'].iloc[0]))
+#fft_magnitude = np.abs(fft_result)
+
+# Plotting Frequency Domain
+#plt.figure(figsize=(10, 6))
+#plt.plot(fft_freq[:len(fft_freq)//2], fft_magnitude[:len(fft_magnitude)//2], label='FFT Magnitude')
+#plt.xlabel('Frequency (Hz)')
+#plt.ylabel('Magnitude (Db)')
+#plt.title('Frequency Domain of Sensor Data')
+#plt.grid(True)
+#plt.legend()
+#plt.show()
+
+
+
+ser.close()  # Close the serial port when done 
