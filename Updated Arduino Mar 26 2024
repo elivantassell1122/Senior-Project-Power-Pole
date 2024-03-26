@@ -1,0 +1,38 @@
+#include <Arduino.h>
+
+// Define analog pins for each sensor
+const int sensor1Pin = A9;
+const int sensor2Pin = A8;
+const int sensor3Pin = A7;
+
+void setup() {
+  Serial.begin(115200); // Start serial communication at 115200 baud rate
+  
+  // Initialize pins as analog input
+  pinMode(sensor1Pin, INPUT);
+  pinMode(sensor2Pin, INPUT);
+  pinMode(sensor3Pin, INPUT);
+
+  while (!Serial); // Wait for serial connection to become ready
+  Serial.println("Awaiting start command...");
+  while (!Serial.available()); // Wait for start command
+  while (Serial.read() != 's'); // Wait for 's' indicating start
+}
+
+void loop() {
+  unsigned long timestamp = millis(); // Get current time in milliseconds
+  int sensorValue1 = analogRead(sensor1Pin);
+  int sensorValue2 = analogRead(sensor2Pin);
+  int sensorValue3 = analogRead(sensor3Pin);
+
+  // Send timestamp and sensor values
+  Serial.print(timestamp);
+  Serial.print(",");
+  Serial.print(sensorValue1);
+  Serial.print(",");
+  Serial.print(sensorValue2);
+  Serial.print(",");
+  Serial.println(sensorValue3);
+
+  delayMicroseconds(5); // Adjust delay as needed for your sampling rate
+}
