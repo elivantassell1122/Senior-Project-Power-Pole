@@ -1,0 +1,43 @@
+const int switchPin = 2; // The pin the switch is connected to
+const int sensorPins[] = {A9, A8, A7}; // Sensor pins
+bool timerStarted = false;
+unsigned long startTime = 0;
+unsigned long lastSampleTime = 0; // Last time the sensors were read
+const long sampleInterval = 50; // Interval between samples in microseconds (adjust as needed)
+
+void setup() {
+  pinMode(switchPin, INPUT_PULLUP);
+  Serial.begin(115200);
+  for (int i = 0; i < 3; i++) {
+    pinMode(sensorPins[i], INPUT);
+  }
+}
+
+void loop() {
+  unsigned long currentTime = micros();
+  
+  if (digitalRead(switchPin) == LOW && !timerStarted) {
+    startTime = currentTime;
+    timerStarted = true;
+    lastSampleTime = currentTime; // Reset last sample time
+  }
+
+  if (timerStarted && currentTime - lastSampleTime >= sampleInterval) {
+    // It's time to take another sample
+    unsigned long elapsedTime = currentTime - startTime;
+    int sensorValues[3];
+    for (int i = 0; i < 3; i++) {
+      sensorValues[i] = analogRead(sensorPins[i]); // Read each sensor value
+    }
+    // Send elapsed time and sensor values in CSV format
+    Serial.print(elapsedTime);
+    Serial.print(",");
+    Serial.print(sensorValues[0]); // Corresponds to A9
+    Serial.print(",");
+    Serial.print(sensorValues[1]); // Corresponds to A8
+    Serial.print(",");
+    Serial.println(sensorValues[2]); // Corresponds to A7
+    
+    lastSampleTime = currentTime; // Update last sample time
+  }
+}
