@@ -1,0 +1,61 @@
+import serial
+import time
+from datetime import datetime
+import pandas as pd 
+import matplotlib.pyplot as plt
+
+start_time = time.time()  # Record the start time of the data collection
+
+# Serial port configuration
+ser = serial.Serial('/dev/tty.usbmodem150432301', 115200, timeout=1)
+time.sleep(2)  # Allow time for the serial connection to initialize
+
+# Open or create a CSV file
+csv_filename = f"data_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+with open(csv_filename, "w") as file:
+    file.write("Time Elapsed, Sensor 1, Sensor 2, Sensor 3\n")  # Write CSV headers
+
+    while True:
+        if ser.in_waiting > 0:
+            line = ser.readline().decode('utf-8').rstrip()
+            print(line)  # Print to console (optional)
+            file.write(f"{line}\n")  # Write data to CSV
+            file.flush()  # Ensure data is written to the file
+        
+        # Break the loop after 10 seconds
+        if time.time() - start_time > 3:  
+            break
+
+# Close the serial connection
+ser.close()
+
+# Now, read the CSV file with pandas
+data = pd.read_csv(csv_filename)
+
+
+
+
+
+Vcc = 3.3  # Supply voltage
+
+# Convert sensor readings to voltage
+data['Voltage 1'] = data[' Sensor 1'] * (Vcc / 1023)
+data['Voltage 2'] = data[' Sensor 2'] * (Vcc / 1023)
+data['Voltage 3'] = data[' Sensor 3'] * (Vcc / 1023)
+
+# Plotting
+plt.figure(figsize=(10, 6))
+
+# Assuming "Time Elapsed" is in milliseconds and you want it in seconds for the plot
+data['Time Seconds'] = data['Time Elapsed'] / 1000
+
+plt.plot(data['Time Seconds'], data['Voltage 1'], label='Sensor 1 Voltage', linewidth=1)
+plt.plot(data['Time Seconds'], data['Voltage 2'], label='Sensor 2 Voltage', linewidth=1)
+plt.plot(data['Time Seconds'], data['Voltage 3'], label='Sensor 3 Voltage', linewidth=1)
+
+plt.xlabel('Time (seconds)')
+plt.ylabel('Voltage (V)')
+plt.title('Sensor Voltage Over Time')
+plt.grid(True)
+plt.legend()
+plt.show()
